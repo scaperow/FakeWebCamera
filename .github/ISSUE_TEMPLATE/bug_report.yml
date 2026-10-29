@@ -1,0 +1,20 @@
+name: 问题反馈
+description: 报告错误或客户端兼容性问题
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述和复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: 请提供 macOS、Go、ffmpeg、客户端或 NVR 的版本。
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志
+      description: 请先移除账号、密码、IP 等敏感信息。

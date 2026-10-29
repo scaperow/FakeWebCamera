@@ -1,0 +1,16 @@
+name: 功能建议
+description: 提出功能或兼容性改进建议
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景和遇到的问题
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的解决方案
+    validations:
+      required: true
