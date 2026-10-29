@@ -1,0 +1,82 @@
+# FakeWebCamera 配置示例
+#
+# 复制到以下任一位置后启动即可：
+#   ./config.yaml
+#   ~/Library/Application Support/FakeWebCamera/config.yaml
+# 或通过 --config /path/to/config.yaml 指定。
+#
+# 所有字段都有默认值，未出现的字段会保留默认值。
+
+server:
+  # RTSP 监听端口。554 是标准端口但需要 root，默认 8554。
+  rtsp_port: 8554
+  # ONVIF SOAP + Web 控制台端口。
+  http_port: 8080
+  # HTTP/ONVIF 监听地址。0.0.0.0 表示所有网卡。
+  bind: 0.0.0.0
+  # 用于发现与地址广播的网卡。auto 自动选择第一个可用 IPv4 网卡。
+  # 也可以写 en0、en1、bridge0 等具体名称。
+  interface: auto
+  # RTSP over UDP 的端口范围起点。两个都设为 0 可关闭 UDP，仅保留 TCP。
+  udp_rtp_port: 8000
+  udp_rtcp_port: 8001
+
+device:
+  name: Fake Web Camera
+  manufacturer: FakeCam
+  model: FakeWebCamera
+  firmware_version: 1.0.0
+  serial_number: FC-0001
+  hardware_id: FC-0001
+  location: LAN
+  # ONVIF 设备 UUID，留空会自动生成并写回配置。
+  uuid: ""
+
+auth:
+  # 关闭后 RTSP 与 ONVIF 都无需认证（不推荐在共享网络使用）。
+  enabled: true
+  username: admin
+  password: admin123
+  # 允许匿名调用只读发现接口（GetSystemDateAndTime / GetCapabilities /
+  # GetServices / GetDeviceInformation 等）。很多手机 App 与 NVR 在
+  # 认证前会先探测这些接口。
+  allow_anonymous_info: true
+  # WS-UsernameToken 的 Created 允许的时间偏差（分钟）。
+  clock_skew_minutes: 5
+
+video:
+  # 循环播放的视频文件，支持 mp4/mov/mkv/avi 等 ffmpeg 能解码的格式。
+  # 留空或文件不存在时自动使用 testsrc2 测试图案。
+  source: ~/Movies/fakecam.mp4
+  width: 1920
+  height: 1080
+  fps: 25
+  bitrate_kbps: 2500
+  # 关键帧间隔（帧数）。
+  gop: 50
+  # auto 优先使用 VideoToolbox，失败时回退 libx264。
+  # 可选：auto / videotoolbox / libx264
+  encoder: auto
+  loop: true
+
+mjpeg:
+  # 是否启用 /stream2（第二路 ONVIF profile）。
+  # 即使关闭，仍会以低帧率生成 JPEG 供快照和控制台预览使用。
+  enabled: true
+  # RTP/JPEG 要求宽高为 8 的倍数。
+  width: 1280
+  height: 720
+  fps: 10
+  # ffmpeg 的 -q:v，数值越小质量越高（2-31）。
+  quality: 5
+
+onvif:
+  events: true
+  # 周期性模拟移动侦测事件，便于 NVR 联动测试。
+  motion_simulation: false
+  motion_interval_seconds: 20
+
+web:
+  # 默认仅允许本机访问控制台。
+  # 设为 true 后局域网可访问，并要求使用上面的用户名/密码（Basic Auth）。
+  allow_lan: false

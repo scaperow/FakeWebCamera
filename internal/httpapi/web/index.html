@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FakeWebCamera 控制台</title>
+<style>
+  :root {
+    --bg: #0a0e13;
+    --panel: #111820;
+    --panel-2: #0d141b;
+    --border: #1f2b38;
+    --text: #e6edf5;
+    --muted: #8a9bad;
+    --accent: #3ddc97;
+    --accent-2: #59a7ff;
+    --danger: #ff6b6b;
+    --warn: #f5c451;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(89,167,255,.12), transparent 60%),
+      radial-gradient(900px 450px at -10% 110%, rgba(61,220,151,.09), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 22px 60px; }
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+  .logo {
+    width: 42px; height: 42px; border-radius: 12px; flex: 0 0 auto;
+    background: linear-gradient(140deg, var(--accent), #1f9d73 65%, #12654a);
+    position: relative; box-shadow: 0 8px 24px rgba(61,220,151,.22);
+  }
+  .logo::before {
+    content: ""; position: absolute; inset: 12px 9px; border-radius: 5px;
+    background: #07110d; border: 2px solid rgba(255,255,255,.75);
+  }
+  .logo::after {
+    content: ""; position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent); right: 8px; top: 16px; box-shadow: 0 0 0 3px #07110d;
+  }
+  h1 { font-size: 19px; margin: 0; letter-spacing: .2px; }
+  .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .grow { flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px;
+    border-radius: 999px; border: 1px solid var(--border); background: var(--panel);
+    color: var(--muted); font-size: 12.5px; white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+  .dot.on { background: var(--accent); box-shadow: 0 0 0 3px rgba(61,220,151,.15); }
+  .dot.warn { background: var(--warn); }
+  button {
+    appearance: none; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); padding: 8px 13px; border-radius: 10px; font: inherit;
+    font-size: 13px; cursor: pointer; transition: .15s border-color, .15s background, .15s transform;
+  }
+  button:hover { border-color: #31465c; background: #15202b; }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04120c; font-weight: 650; }
+  button.primary:hover { background: #52e8a8; }
+  button.ghost { background: transparent; }
+  .grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,.018), transparent 60%), var(--panel);
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  }
+  .card h2 {
+    margin: 0; padding: 14px 16px; font-size: 13px; font-weight: 600;
+    color: #c9d6e4; letter-spacing: .3px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h2 .tag { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  .card-body { padding: 16px; }
+  .preview {
+    position: relative; aspect-ratio: 16/9; background: #05080b;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .preview img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .preview .offline {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px; color: var(--muted); font-size: 13px;
+    background: repeating-linear-gradient(135deg, #070b10 0 10px, #0a1016 10px 20px);
+  }
+  .preview .badge {
+    position: absolute; left: 10px; top: 10px; padding: 4px 8px; border-radius: 7px;
+    background: rgba(4,10,8,.72); color: var(--accent); font-size: 11px; letter-spacing: .4px;
+    border: 1px solid rgba(61,220,151,.25); backdrop-filter: blur(6px);
+  }
+  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 16px 16px; }
+  .meta .item { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; min-width: 0; }
+  .meta .k { color: var(--muted); font-size: 11px; letter-spacing: .3px; text-transform: uppercase; }
+  .meta .v { font-size: 13px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .urls { display: flex; flex-direction: column; gap: 9px; }
+  .urlrow {
+    display: flex; align-items: center; gap: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px;
+  }
+  .urlrow .label { color: var(--muted); font-size: 11px; width: 48px; flex: 0 0 auto; }
+  .urlrow code { flex: 1; font-size: 12px; color: #b9d6ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .urlrow button { padding: 4px 8px; font-size: 11px; border-radius: 7px; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 620px) { .form { grid-template-columns: 1fr; } .meta { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .field.wide { grid-column: 1 / -1; }
+  .field label { color: var(--muted); font-size: 11.5px; }
+  input, select {
+    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 13px; outline: none;
+  }
+  input:focus, select:focus { border-color: #335a7d; box-shadow: 0 0 0 3px rgba(89,167,255,.1); }
+  .switch { display: flex; align-items: center; gap: 8px; padding-top: 18px; }
+  .switch input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .actions { display: flex; gap: 9px; justify-content: flex-end; margin-top: 16px; }
+  .hint { color: var(--muted); font-size: 11.5px; margin-top: 8px; }
+  .logs {
+    margin: 0; padding: 12px 14px; max-height: 260px; overflow: auto; background: #070b10;
+    font: 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #9fb2c6;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .logs .err { color: #ff9c9c; }
+  .toast {
+    position: fixed; right: 20px; bottom: 20px; padding: 11px 15px; border-radius: 10px;
+    background: #16212c; border: 1px solid #2b3d4f; color: var(--text); font-size: 13px;
+    opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; z-index: 20;
+    box-shadow: 0 14px 40px rgba(0,0,0,.45);
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.ok { border-color: rgba(61,220,151,.45); }
+  .toast.bad { border-color: rgba(255,107,107,.5); }
+  .clients { display: flex; flex-direction: column; gap: 6px; }
+  .client { display: flex; gap: 8px; font-size: 12px; color: var(--muted); }
+  .client b { color: var(--text); font-weight: 500; }
+  .empty { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <h1>FakeWebCamera</h1>
+      <div class="sub">ONVIF · RTSP 虚拟 IP 摄像头</div>
+    </div>
+    <div class="grow"></div>
+    <span class="pill"><span class="dot" id="dot"></span><span id="stateText">加载中</span></span>
+    <span class="pill" id="uptime">--</span>
+    <button class="ghost" onclick="triggerMotion()">触发移动事件</button>
+    <button class="primary" onclick="restart()">重启服务</button>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>实时预览 <span class="tag" id="resolution">--</span></h2>
+      <div class="preview">
+        <img id="preview" src="/api/preview.mjpg" alt="预览">
+        <div class="offline" id="offline">等待视频源…</div>
+        <div class="badge" id="codecBadge">H.264</div>
+      </div>
+      <div class="meta">
+        <div class="item"><div class="k">视频源</div><div class="v" id="source">--</div></div>
+        <div class="item"><div class="k">编码器</div><div class="v" id="encoder">--</div></div>
+        <div class="item"><div class="k">帧计数</div><div class="v" id="frames">--</div></div>
+        <div class="item"><div class="k">运行时长</div><div class="v" id="uptime2">--</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>连接地址</h2>
+      <div class="card-body">
+        <div class="urls">
+          <div class="urlrow"><span class="label">RTSP</span><code id="rtsp">--</code><button onclick="copyText('rtsp')">复制</button></div>
+          <div class="urlrow"><span class="label">MJPEG</span><code id="rtsp2">--</code><button onclick="copyText('rtsp2')">复制</button></div>
+          <div class="urlrow"><span class="label">ONVIF</span><code id="onvif">--</code><button onclick="copyText('onvif')">复制</button></div>
+          <div class="urlrow"><span class="label">快照</span><code id="snapshot">--</code><button onclick="copyText('snapshot')">复制</button></div>
+        </div>
+        <div class="meta" style="padding:14px 0 0">
+          <div class="item"><div class="k">网卡</div><div class="v" id="iface">--</div></div>
+          <div class="item"><div class="k">IP</div><div class="v" id="ip">--</div></div>
+        </div>
+        <div style="margin-top:14px">
+          <div class="k" style="color:var(--muted);font-size:11px;text-transform:uppercase;margin-bottom:7px">当前客户端</div>
+          <div class="clients" id="clients"><div class="empty">暂无客户端连接</div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:18px">
+    <h2>摄像头设置 <span class="tag">保存后服务会自动重启</span></h2>
+    <div class="card-body">
+      <form id="cfgForm" onsubmit="saveConfig(event)">
+        <div class="form">
+          <div class="field wide">
+            <label>视频文件路径（循环播放）</label>
+            <input name="video.source" placeholder="/Users/you/Movies/fakecam.mp4">
+          </div>
+          <div class="field">
+            <label>分辨率宽度</label>
+            <input name="video.width" type="number" min="16" step="2">
+          </div>
+          <div class="field">
+            <label>分辨率高度</label>
+            <input name="video.height" type="number" min="16" step="2">
+          </div>
+          <div class="field">
+            <label>帧率</label>
+            <input name="video.fps" type="number" min="1" max="60">
+          </div>
+          <div class="field">
+            <label>码率 (kbps)</label>
+            <input name="video.bitrate_kbps" type="number" min="64" step="64">
+          </div>
+          <div class="field">
+            <label>编码器</label>
+            <select name="video.encoder">
+              <option value="auto">自动（优先 VideoToolbox）</option>
+              <option value="videotoolbox">VideoToolbox</option>
+              <option value="libx264">libx264</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>RTSP 端口</label>
+            <input name="server.rtsp_port" type="number" min="1" max="65535">
+          </div>
+          <div class="field">
+            <label>ONVIF / Web 端口</label>
+            <input name="server.http_port" type="number" min="1" max="65535">
+          </div>
+          <div class="field">
+            <label>设备名称</label>
+            <input name="device.name">
+          </div>
+          <div class="field">
+            <label>厂商</label>
+            <input name="device.manufacturer">
+          </div>
+          <div class="field">
+            <label>型号</label>
+            <input name="device.model">
+          </div>
+          <div class="field">
+            <label>序列号</label>
+            <input name="device.serial_number">
+          </div>
+          <div class="field">
+            <label>ONVIF 用户名</label>
+            <input name="auth.username" autocomplete="username">
+          </div>
+          <div class="field">
+            <label>ONVIF / RTSP 密码</label>
+            <input name="auth.password" type="password" autocomplete="current-password">
+          </div>
+          <div class="field switch">
+            <input type="checkbox" name="auth.enabled" id="authEnabled">
+            <label for="authEnabled" style="margin:0;color:var(--text)">启用认证</label>
+          </div>
+          <div class="field switch">
+            <input type="checkbox" name="mjpeg.enabled" id="mjpegEnabled">
+            <label for="mjpegEnabled" style="margin:0;color:var(--text)">启用 MJPEG 第二路</label>
+          </div>
+          <div class="field switch">
+            <input type="checkbox" name="onvif.motion_simulation" id="motionSim">
+            <label for="motionSim" style="margin:0;color:var(--text)">周期模拟移动侦测</label>
+          </div>
+          <div class="field switch">
+            <input type="checkbox" name="web.allow_lan" id="allowLan">
+            <label for="allowLan" style="margin:0;color:var(--text)">允许局域网访问控制台</label>
+          </div>
+        </div>
+        <div class="hint">默认账号 admin / admin123。修改端口或网卡后需要重启应用；保存设置会自动重启流媒体服务。</div>
+        <div class="actions">
+          <button type="button" class="ghost" onclick="loadConfig()">重置</button>
+          <button type="submit" class="primary">保存并应用</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <h2>运行日志 <span class="tag"><button class="ghost" style="padding:2px 8px;font-size:11px" onclick="loadLogs()">刷新</button></span></h2>
+    <pre class="logs" id="logs">加载中…</pre>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let cfg = null;
+
+function toast(msg, kind) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (kind || '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = 'toast', 2600);
+}
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  if (!res.ok) throw new Error(await res.text() || res.statusText);
+  return res.json();
+}
+
+function setText(id, v) { const el = $(id); if (el) el.textContent = v || '--'; }
+
+async function loadStatus() {
+  try {
+    const s = await api('/api/status');
+    const m = s.media || {};
+    $('dot').className = 'dot ' + (m.running ? 'on' : 'warn');
+    setText('stateText', m.running ? '服务运行中' : '服务已停止');
+    setText('uptime', s.uptime ? '运行 ' + s.uptime : '--');
+    setText('uptime2', s.uptime);
+    setText('resolution', s.mjpeg_resolution || s.resolution);
+    setText('source', m.source || '测试图案');
+    setText('encoder', m.encoder || '--');
+    setText('frames', 'H.264 ' + (m.h264_frames || 0) + ' / JPEG ' + (m.jpeg_frames || 0));
+    setText('iface', s.interface);
+    setText('ip', s.ip);
+    $('rtsp').textContent = s.rtsp_url || '--';
+    $('rtsp2').textContent = s.rtsp_mjpeg_url || '（未启用）';
+    $('onvif').textContent = s.onvif_url || '--';
+    $('snapshot').textContent = s.snapshot_url || '--';
+    $('codecBadge').textContent = (s.mjpeg_resolution || s.resolution || '') + ' · MJPEG';
+
+    const clients = s.clients || [];
+    const box = $('clients');
+    if (!clients.length) {
+      box.innerHTML = '<div class="empty">暂无客户端连接</div>';
+    } else {
+      box.innerHTML = clients.map(c =>
+        '<div class="client"><b>' + escapeHtml(c.remote) + '</b><span>' +
+        escapeHtml(c.transport || '') + '</span><span>' + escapeHtml(c.path || '') + '</span></div>'
+      ).join('');
+    }
+    $('offline').style.display = m.last_jpeg ? 'none' : 'flex';
+  } catch (e) {
+    $('dot').className = 'dot';
+    setText('stateText', '无法连接');
+  }
+}
+
+async function loadConfig() {
+  try {
+    cfg = await api('/api/config');
+    for (const el of document.querySelectorAll('#cfgForm [name]')) {
+      const path = el.name.split('.');
+      let v = cfg;
+      for (const p of path) v = v == null ? undefined : v[p];
+      if (el.type === 'checkbox') el.checked = !!v;
+      else el.value = v == null ? '' : v;
+    }
+  } catch (e) { toast('读取配置失败: ' + e.message, 'bad'); }
+}
+
+function readConfig() {
+  const out = JSON.parse(JSON.stringify(cfg));
+  for (const el of document.querySelectorAll('#cfgForm [name]')) {
+    const path = el.name.split('.');
+    let obj = out;
+    for (let i = 0; i < path.length - 1; i++) obj = obj[path[i]];
+    if (el.type === 'checkbox') obj[path[path.length - 1]] = el.checked;
+    else if (el.type === 'number') obj[path[path.length - 1]] = Number(el.value);
+    else obj[path[path.length - 1]] = el.value;
+  }
+  return out;
+}
+
+async function saveConfig(ev) {
+  ev.preventDefault();
+  try {
+    const next = readConfig();
+    await api('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(next)
+    });
+    toast('配置已保存，服务正在重启…', 'ok');
+    setTimeout(() => { loadConfig(); loadStatus(); }, 1800);
+  } catch (e) { toast('保存失败: ' + e.message, 'bad'); }
+}
+
+async function restart() {
+  try {
+    await api('/api/restart', {method: 'POST'});
+    toast('服务正在重启…', 'ok');
+    setTimeout(loadStatus, 1500);
+  } catch (e) { toast('重启失败: ' + e.message, 'bad'); }
+}
+
+async function triggerMotion() {
+  try {
+    await api('/api/motion', {method: 'POST'});
+    toast('已发送移动侦测事件', 'ok');
+  } catch (e) { toast('发送失败: ' + e.message, 'bad'); }
+}
+
+async function loadLogs() {
+  try {
+    const data = await api('/api/logs?lines=250');
+    $('logs').innerHTML = (data.lines || []).map(l => {
+      const cls = /error|failed|unauthorized|panic/i.test(l) ? 'err' : '';
+      return '<span class="' + cls + '">' + escapeHtml(l) + '</span>';
+    }).join('\n');
+    $('logs').scrollTop = $('logs').scrollHeight;
+  } catch (e) { $('logs').textContent = '日志加载失败: ' + e.message; }
+}
+
+function copyText(id) {
+  const text = $(id).textContent;
+  if (!text || text === '--') return;
+  navigator.clipboard.writeText(text).then(
+    () => toast('已复制', 'ok'),
+    () => toast('复制失败', 'bad')
+  );
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+$('preview').addEventListener('error', () => {
+  setTimeout(() => { $('preview').src = '/api/preview.mjpg?t=' + Date.now(); }, 2000);
+});
+
+loadStatus();
+loadConfig();
+loadLogs();
+setInterval(loadStatus, 2500);
+setInterval(loadLogs, 5000);
+</script>
+</body>
+</html>
