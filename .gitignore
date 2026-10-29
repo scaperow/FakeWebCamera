@@ -1,0 +1,17 @@
+# Local configuration can contain credentials and device identifiers.
+/config.yaml
+/config.local.yaml
+
+# Build outputs and Go test artifacts.
+/build/
+/dist/
+*.test
+*.out
+coverage.txt
+
+# Local video files and system/editor metadata.
+/testdata/*.mp4
+/testdata/*.mov
+.DS_Store
+.idea/
+.vscode/
