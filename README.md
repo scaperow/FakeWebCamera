@@ -185,6 +185,17 @@ ffmpeg ──H.264/MPEG-TS──> MPEG-TS 解析 ──AU──> gortsplib Serve
 - 配置变更采用“保存 → 异步重启全部组件”，避免热更新竞态。
 - WS-Discovery 按收包网卡的 `IfIndex` 选择返回的 IP，多网卡（Wi-Fi + 有线 + VPN）下地址正确。
 
+## 发布新版本
+
+推送版本标签即可触发 GitHub Actions，分别构建 Apple Silicon 和 Intel 的 macOS 应用，并将 ZIP 包及 SHA-256 校验文件上传到 GitHub Releases：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+应用采用 ad-hoc 签名，未进行 Apple 公证；首次打开可能需要在系统设置中允许。运行仍需单独安装 ffmpeg。发布工作流仅在两个架构均构建成功后创建 Release；若发布失败，可在 Actions 中重新运行失败的工作流。
+
 ## 参与贡献
 
 欢迎提交问题和 Pull Request；开发及提交说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。

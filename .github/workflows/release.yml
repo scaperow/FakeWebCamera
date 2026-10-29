@@ -1,0 +1,66 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: amd64
+            runner: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build and package
+        env:
+          TAG: ${{ github.ref_name }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          ./scripts/build-app.sh --version "$VERSION"
+          codesign --verify --deep --strict build/FakeWebCamera.app
+          ditto -c -k --sequesterRsrc --keepParent build/FakeWebCamera.app "build/FakeWebCamera-${TAG}-macOS-${ARCH}.zip"
+          shasum -a 256 "build/FakeWebCamera-${TAG}-macOS-${ARCH}.zip" > "build/FakeWebCamera-${TAG}-macOS-${ARCH}.zip.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.arch }}
+          path: |
+            build/*.zip
+            build/*.sha256
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" release-assets/* --verify-tag --generate-notes --title "$TAG"
